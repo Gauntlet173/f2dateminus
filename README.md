@@ -17,8 +17,11 @@ It adds the following predicates:
 
 `\dateTime[|minus(\dateTime)=>\duration|]`
 
-`\date[|toDateTime=>\dateTime|]`
+`\date[|toDateTime(\integer,\integer,\decimal)=>\dateTime|]`
 
 ## Notes
 
-`toDateTime` adds `0:0:0` (midnight) as the time. All versions of `minus` convert dates into dateTimes in this way, and then return the resulting duration.
+All versions of `minus` convert dates into dateTimes using 
+the time of `00:00:00`.
+
+There are problems with negative results, and with certain calculations spanning February.

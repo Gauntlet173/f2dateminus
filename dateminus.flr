@@ -58,11 +58,11 @@
 	// Subtract the days
 	?nd3[day->?fd]@\btp,
 	?day \is ?fd - ?sd,
-	\if ?day < 1 \then (
+	\if ?day < 0 \then (
 		// Figure out how many days are borrowed.
         // The largest negative value for ?day is -30
         // If we borrow from February, we get 28, and there are still -2 days.
-        // We may need to loop this until days is positive.
+        // We may need to loop this until days is positive?
 		?nd3[nextmonth(-1)->?nd4]@\btp,
 		?nd4.monthend[day->?days_in_prior_month]@\btp,
 		?day2 \is ?day + ?days_in_prior_month
@@ -73,7 +73,7 @@
 	// Subtract the months
 	?nd4[month->?fmo]@\btp,
 	?month \is ?fmo - ?smo,
-	\if ?month < 1 \then (
+	\if ?month < 0 \then (
 		?month2 \is ?month + 12,
 		?nd4[nextyear(-1)->?nd5]@\btp
 	) \else (
@@ -130,3 +130,4 @@
 ?- \d"2021-01-10"[minus(\d"1970-04-25")->?diff2].
 ?- \dt"2021-01-10T17:16:00Z"[minus(\d"2020-01-11")->?diff3].
 ?- \d"2021-01-10"[minus(\dt"2020-01-11T0:0:0Z")->?diff4].
+?- \d"2020-02-28"[minus(\d"2020-03-30")->?diff5]. //ERROR
