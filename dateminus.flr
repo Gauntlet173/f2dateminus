@@ -9,9 +9,12 @@
 
 // Requires Flora-2 version 2.1 or later.
 
+// Known Issues:
+// subtractions with negative durations are giving incorrect results.
+
 ?first_date^^\dateTime[minus(?second_date^^\dateTime)->?duration] :-
+
 	// Convert both into local time (remove time zone info)
-	// TO DO: Check to see if this works if they are already local time.
 	?first_date[localtime->?local_first_date]@\btp,
 	?second_date[localtime->?local_second_date]@\btp,
 	// Break second date into pieces
@@ -26,85 +29,104 @@
 	// Apply the sign to the second date year
 	?sy \is ?sy * ?sds,
 	// Subtract the seconds
-	?first_local_date[second->?fs]@\btp,
+	?local_first_date[second->?fs]@\btp,
 	?sec \is ?fs - ?ss,
 	\if ?sec < 0 \then (
-		?sec \is ?sec + 60,
-		?first_local_date[nextminute(-1)->?newdate]@\btp
-	) \else (?newdate = ?first_local_date),
+		?sec2 \is ?sec + 60,
+		?local_first_date[nextminute(-1)->?newdate]@\btp
+	) \else (
+        ?newdate = ?local_first_date,
+        ?sec2 = ?sec),
 	// Subtract the minutes
 	?newdate[minute->?fm]@\btp,
 	?min \is ?fm - ?sm,
 	\if ?min < 0 \then (
-		?min \is ?min + 60,
+		?min2 \is ?min + 60,
 		?newdate[nexthour(-1)->?nd2]@\btp
-	) \else (?nd2 = ?newdate),
+	) \else (
+        ?nd2 = ?newdate,
+        ?min2 = ?min),
 	// Subtract the hours
 	?nd2[hour->?fh]@\btp,
 	?hour \is ?fh - ?sh,
 	\if ?hour < 0 \then (
-		?them_hour \is ?hour + 24,
+		?hour2 \is ?hour + 24,
 		?nd2[nextday(-1)->?nd3]@\btp
-	) \else (?nd3 = ?nd2),
+	) \else (
+        ?nd3 = ?nd2,
+        ?hour2 = ?hour),
 	// Subtract the days
 	?nd3[day->?fd]@\btp,
 	?day \is ?fd - ?sd,
 	\if ?day < 1 \then (
 		// Figure out how many days are borrowed.
+        // The largest negative value for ?day is -30
+        // If we borrow from February, we get 28, and there are still -2 days.
+        // We may need to loop this until days is positive.
 		?nd3[nextmonth(-1)->?nd4]@\btp,
 		?nd4.monthend[day->?days_in_prior_month]@\btp,
-		?day \is ?day + ?days_in_prior_month
-	) \else (?nd4 = ?nd3),
+		?day2 \is ?day + ?days_in_prior_month
+	) \else (
+        ?nd4 = ?nd3,
+        ?day2 = ?day
+    ),
 	// Subtract the months
 	?nd4[month->?fmo]@\btp,
 	?month \is ?fmo - ?smo,
 	\if ?month < 1 \then (
-		?month \is ?month + 12,
+		?month2 \is ?month + 12,
 		?nd4[nextyear(-1)->?nd5]@\btp
-	) \else (?nd5 = ?nd4),
+	) \else (
+        ?nd5 = ?nd4,
+        ?month2 = ?month),
 	// Subtract the years
 	?nd5[year->?fy,dateSign->?fds]@\btp,
-	?fy \ is ?fy * ?fds, // Apply the sign to the year
+	?fy \is ?fy * ?fds, // Apply the sign to the year
 	?year \is ?fy - ?sy,
 	// Calculate the duration sign
 	\if ?year < 0 \then (
-		?year \is ?year * -1,
+		?year2 \is ?year * -1,
 		?sign = -1
 	) \else (
+        ?year2 = ?year,
 		?sign = 1
 	),
 	// Create the output
-	\duration[toType(?sign,?year,?month,?day,?hour,?min,?sec)->?duration]@\btp.
+	\duration[toType(?sign,?year2,?month2,?day2,?hour2,?min2,?sec2)->?duration]@\btp.
 
 // TO DO: Add versions of the predicate to detect type errors.
 
 ?first_date^^\date[minus(?second_date^^\date)->?duration] :-
 	// Convert both to datetimes, and try again.
-	?first_date[toDateTime(0,0,0)->?fdt]@\btp,
-	?second_date[toDateTime(0,0,0)->?sdt]@\btp,
+	?first_date[toDateTime(0,0,0)->?fdt],
+	?second_date[toDateTime(0,0,0)->?sdt],
 	?fdt[minus(?sdt)->?duration].
 
 ?first_date^^\dateTime[minus(?second_date^^\date)->?duration] :-
-	// Convert both to datetimes, and try again.
-	?second_date[toDateTime(0,0,0)->?sdt]@\btp,
+	?second_date[toDateTime(0,0,0)->?sdt],
 	?first_date[minus(?sdt)->?duration].
 
 ?first_date^^\date[minus(?second_date^^\dateTime)->?duration] :-
-	// Convert both to datetimes, and try again.
-	?first_date[toDateTime(0,0,0)->?fdt]@\btp,
+	?first_date[toDateTime(0,0,0)->?fdt],
 	?fdt[minus(?second_date)->?duration].
 
 // toDateTime
-?date^^\date[toDateTime->?dateTime] :-
+?date^^\date[toDateTime(?h^^\integer,?m^^\integer,?s^^\number)->?dateTime] :-
 	?date[
-		dateSign->?datesign,
+		dateSign->?dateSign,
 		year->?year,
 		month->?month,
 		day->?day,
 		zoneSign->?zs,
 		zoneHour->?zh,
 		zoneMinute->?zm
-	],
-	\dateTime[toType(?dateSign,?year,?month,?day,0,0,0,?zs,?zh,?zm)->?dateTime].
+	]@\btp,
+	\dateTime[toType(?dateSign,?year,?month,?day,?h,?m,?s,?zs,?zh,?zm)->?dateTime]@\btp.
 
 // TO DO: Add tests.
+
+?- \dt"2021-01-10T17:16:00Z"[minus(\dt"2020-01-11T0:0:0Z")->?diff].
+?- \d"2021-01-10"[toDateTime(0,0,0)->?datetime].
+?- \d"2021-01-10"[minus(\d"1970-04-25")->?diff2].
+?- \dt"2021-01-10T17:16:00Z"[minus(\d"2020-01-11")->?diff3].
+?- \d"2021-01-10"[minus(\dt"2020-01-11T0:0:0Z")->?diff4].
