@@ -1,11 +1,10 @@
 # F2DateMinus
 
-This module adds the ability to subtract dates from one
-another to Flora-2.
+This module adds the ability to subtract dates and times from one
+another in Flora-2.
 
-This feature is not included in Flora-2, but is included in the commercially-available ErgoAI.
-
-The code is probably not efficient.
+Note that this implementation is likely less efficient than, and
+may not be functionally identical to the implementation in ErgoAI.
 
 It adds the following predicates:
 
@@ -17,11 +16,16 @@ It adds the following predicates:
 
 `\dateTime[|minus(\dateTime)=>\duration|]`
 
+Note that in date subtraction days are prioritized over months. So
+March 30-February 28 will be `\du"P30D"` not `\du"P1M2D"`.
+
 `\date[|toDateTime(\integer,\integer,\decimal)=>\dateTime|]`
 
-## Notes
+Accepts hours, minutes, and seconds. Keeps the time zone in the date.
 
-All versions of `minus` convert dates into dateTimes using 
-the time of `00:00:00`.
+`\time[|toDateTime(\integer,\integer,\integer)=>\dateTime|]`
 
-There are problems with negative results, and with certain calculations spanning February.
+Accepts year, month, and day. Keeps the time zone in the time.
+
+`\time[|minus(\time)=>\duration|]`
+
