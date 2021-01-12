@@ -13,8 +13,6 @@
 
 // Requires Flora-2 version 2.1 or later.
 
-// TO DO: Negative Date Subtraction Broken
-
 ?first_date^^\dateTime[minus(?second_date^^\dateTime)->?duration] :-
 	?first_date[lessThan(?second_date)]@\btp,
 	?second_date[minus(?first_date)->?temp_dur],
